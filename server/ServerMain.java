@@ -8,6 +8,7 @@ import java.util.List;
 public class ServerMain {
 
     public static List<ClientHandler> clients = new ArrayList<>();
+    public static List<String> activeUsers = new ArrayList<>();
 
     public static void main(String[] args) {
 
@@ -28,6 +29,17 @@ public class ServerMain {
 
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public static void broadcast(String message) {
+
+        for (ClientHandler client : clients) {
+            try {
+                client.send(message);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 }

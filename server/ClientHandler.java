@@ -9,7 +9,10 @@ public class ClientHandler extends Thread {
     private BufferedReader reader;
     private BufferedWriter writer;
 
+    private String username;
+
     public ClientHandler(Socket socket) {
+
         this.socket = socket;
 
         try {
@@ -24,47 +27,69 @@ public class ClientHandler extends Thread {
     @Override
     public void run() {
 
-        String message;
+        try {
 
-        while (socket.isConnected()) {
+            // 1. FIRST MESSAGE = username
+            username = reader.readLine();
 
-            try {
+            ServerMain.activeUsers.add(username);
+
+            ServerMain.broadcast("🟢 " + username + " joined chat");
+            sendActiveUsers();
+
+            String message;
+
+            while (socket.isConnected()) {
+
                 message = reader.readLine();
 
-                if (message == null) {
-                    break;
-                }
+                if (message == null) break;
 
-                System.out.println("📩 Received: " + message);
-
-                broadcast(message);
-
-            } catch (Exception e) {
-                closeEverything();
-                break;
+                ServerMain.broadcast(username + ": " + message);
             }
+
+        } catch (Exception e) {
+            closeEverything();
         }
     }
 
-    private void broadcast(String message) {
+    public void send(String message) throws IOException {
+        writer.write(message);
+        writer.newLine();
+        writer.flush();
+    }
 
-        for (ClientHandler client : ServerMain.clients) {
-            try {
-                client.writer.write(message);
-                client.writer.newLine();
-                client.writer.flush();
+    private void sendActiveUsers() {
 
-            } catch (Exception e) {
-                e.printStackTrace();
+        try {
+
+            String users = String.join(",", ServerMain.activeUsers);
+
+            for (ClientHandler c : ServerMain.clients) {
+                c.writer.write("USERS:" + users);
+                c.writer.newLine();
+                c.writer.flush();
             }
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
     private void closeEverything() {
+
         try {
+
+            ServerMain.clients.remove(this);
+            ServerMain.activeUsers.remove(username);
+
+            ServerMain.broadcast("🔴 " + username + " left chat");
+            sendActiveUsers();
+
             socket.close();
             reader.close();
             writer.close();
+
         } catch (Exception e) {
             e.printStackTrace();
         }
