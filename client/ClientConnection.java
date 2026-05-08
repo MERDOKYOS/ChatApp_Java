@@ -6,24 +6,27 @@ import java.net.Socket;
 public class ClientConnection {
 
     private static Socket socket;
-    private static BufferedReader reader;
-    private static BufferedWriter writer;
+    private static DataInputStream dis;
+    private static DataOutputStream dos;
 
+    private static boolean connected = false;
+
+    // ================= CONNECT =================
     public static void connect(String username) {
+
+        if (connected) return; // 🔥 PREVENT DOUBLE CONNECT
+        connected = true;
 
         try {
 
             socket = new Socket("localhost", 5000);
 
-            reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            dis = new DataInputStream(socket.getInputStream());
+            dos = new DataOutputStream(socket.getOutputStream());
 
-            // send username first
-            writer.write(username);
-            writer.newLine();
-            writer.flush();
-
-            System.out.println("Connected as " + username);
+            // send username ONCE
+            dos.writeUTF(username);
+            dos.flush();
 
             receiveMessages();
 
@@ -32,52 +35,117 @@ public class ClientConnection {
         }
     }
 
+    // ================= SEND MESSAGE =================
     public static void sendMessage(String message) {
 
         try {
-            writer.write(message);
-            writer.newLine();
-            writer.flush();
+            dos.writeUTF("MESSAGE");
+            dos.writeUTF(message);
+            dos.flush();
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+    // ================= SEND FILE =================
+    public static void sendFile(File file) {
+
+        try {
+
+            FileInputStream fis = new FileInputStream(file);
+
+            dos.writeUTF("FILE");
+            dos.writeUTF(file.getName());
+            dos.writeLong(file.length());
+
+            byte[] buffer = new byte[4096];
+            int read;
+
+            while ((read = fis.read(buffer)) != -1) {
+                dos.write(buffer, 0, read);
+            }
+
+            dos.flush();
+            fis.close();
+
+            ChatUI.displayMessage("📁 File sent: " + file.getName());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ================= RECEIVE =================
     private static void receiveMessages() {
 
         new Thread(() -> {
 
-            String msg;
+            try {
 
-            while (socket.isConnected()) {
+                while (socket.isConnected()) {
 
-                try {
+                    String type = dis.readUTF();
 
-                    msg = reader.readLine();
+                    // MESSAGE
+                    if (type.equals("MESSAGE")) {
 
-                    if (msg != null) {
-
-                        if (msg.startsWith("USERS:")) {
-
-                            String users = msg.substring(6);
-                            String[] list = users.split(",");
-
-                            javafx.application.Platform.runLater(() -> {
-                                ChatUI.usersList.getItems().clear();
-                                ChatUI.usersList.getItems().addAll(list);
-                            });
-
-                        } else {
-                            ChatUI.displayMessage(msg);
-                        }
+                        String msg = dis.readUTF();
+                        ChatUI.displayMessage(msg);
                     }
 
-                } catch (Exception e) {
-                    break;
+                    // USERS
+                    else if (type.equals("USERS")) {
+
+                        String users = dis.readUTF();
+                        ChatUI.updateUsers(users.split(","));
+                    }
+
+                    // FILE
+                    else if (type.equals("FILE")) {
+
+                        String fileName = dis.readUTF();
+                        long fileSize = dis.readLong();
+
+                        String savePath = "client_received_" + fileName;
+
+                        receiveFile(savePath, fileSize);
+
+                        ChatUI.showFileMessage(fileName, savePath);
+                    }
                 }
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
 
         }).start();
+    }
+
+    // ================= RECEIVE FILE =================
+    private static void receiveFile(String savePath, long fileSize) {
+
+        try {
+
+            FileOutputStream fos = new FileOutputStream(savePath);
+
+            byte[] buffer = new byte[4096];
+            int read;
+            long remaining = fileSize;
+
+            while (remaining > 0 &&
+                    (read = dis.read(buffer, 0, (int)Math.min(buffer.length, remaining))) > 0) {
+
+                fos.write(buffer, 0, read);
+                remaining -= read;
+            }
+
+            fos.close();
+
+            ChatUI.displayMessage("📁 File saved: " + savePath);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

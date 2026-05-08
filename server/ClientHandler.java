@@ -6,8 +6,8 @@ import java.net.Socket;
 public class ClientHandler extends Thread {
 
     private Socket socket;
-    private BufferedReader reader;
-    private BufferedWriter writer;
+    private DataInputStream dis;
+    private DataOutputStream dos;
 
     private String username;
 
@@ -16,9 +16,8 @@ public class ClientHandler extends Thread {
         this.socket = socket;
 
         try {
-            reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-
+            dis = new DataInputStream(socket.getInputStream());
+            dos = new DataOutputStream(socket.getOutputStream());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -29,23 +28,41 @@ public class ClientHandler extends Thread {
 
         try {
 
-            // 1. FIRST MESSAGE = username
-            username = reader.readLine();
-
-            ServerMain.activeUsers.add(username);
-
-            ServerMain.broadcast("🟢 " + username + " joined chat");
-            sendActiveUsers();
-
-            String message;
-
             while (socket.isConnected()) {
 
-                message = reader.readLine();
+                String type = dis.readUTF();
 
-                if (message == null) break;
+                // ================= USERNAME =================
+                if (type.equals("USERNAME")) {
 
-                ServerMain.broadcast(username + ": " + message);
+                    username = dis.readUTF();
+
+                    // prevent duplicates
+                    if (!ServerMain.activeUsers.contains(username)) {
+                        ServerMain.activeUsers.add(username);
+                    }
+
+                    ServerMain.broadcast("🟢 " + username + " joined chat");
+
+                    ServerMain.broadcastUsers();
+                }
+
+                // ================= MESSAGE =================
+                else if (type.equals("MESSAGE")) {
+
+                    String message = dis.readUTF();
+
+                    ServerMain.broadcast(username + ": " + message);
+                }
+
+                // ================= FILE =================
+                else if (type.equals("FILE")) {
+
+                    String fileName = dis.readUTF();
+                    long fileSize = dis.readLong();
+
+                    receiveFile(fileName, fileSize);
+                }
             }
 
         } catch (Exception e) {
@@ -53,42 +70,97 @@ public class ClientHandler extends Thread {
         }
     }
 
-    public void send(String message) throws IOException {
-        writer.write(message);
-        writer.newLine();
-        writer.flush();
+    // ================= SEND MESSAGE =================
+    public void sendMessage(String message) {
+
+        try {
+            dos.writeUTF("MESSAGE");
+            dos.writeUTF(message);
+            dos.flush();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    private void sendActiveUsers() {
+    // ================= SEND USERS =================
+    public void sendUsers(String users) {
+
+        try {
+            dos.writeUTF("USERS");
+            dos.writeUTF(users);
+            dos.flush();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ================= SEND FILE =================
+    public void sendFile(String filePath, String fileName, long fileSize) {
 
         try {
 
-            String users = String.join(",", ServerMain.activeUsers);
+            dos.writeUTF("FILE");
+            dos.writeUTF(fileName);
+            dos.writeLong(fileSize);
 
-            for (ClientHandler c : ServerMain.clients) {
-                c.writer.write("USERS:" + users);
-                c.writer.newLine();
-                c.writer.flush();
+            FileInputStream fis = new FileInputStream(filePath);
+
+            byte[] buffer = new byte[4096];
+            int read;
+
+            while ((read = fis.read(buffer)) != -1) {
+                dos.write(buffer, 0, read);
             }
+
+            dos.flush();
+            fis.close();
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+    // ================= RECEIVE FILE =================
+    private void receiveFile(String fileName, long fileSize) {
+
+        try {
+
+            String savePath = "received_" + fileName;
+
+            FileOutputStream fos = new FileOutputStream(savePath);
+
+            byte[] buffer = new byte[4096];
+            int read;
+            long remaining = fileSize;
+
+            while (remaining > 0 &&
+                    (read = dis.read(buffer, 0, (int)Math.min(buffer.length, remaining))) > 0) {
+
+                fos.write(buffer, 0, read);
+                remaining -= read;
+            }
+
+            fos.close();
+
+            ServerMain.broadcast("📁 File received: " + fileName);
+
+            ServerMain.broadcastFile(savePath, fileName, fileSize, this);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ================= CLEANUP =================
     private void closeEverything() {
 
         try {
 
-            ServerMain.clients.remove(this);
-            ServerMain.activeUsers.remove(username);
-
-            ServerMain.broadcast("🔴 " + username + " left chat");
-            sendActiveUsers();
+            ServerMain.removeClient(this, username);
 
             socket.close();
-            reader.close();
-            writer.close();
+            dis.close();
+            dos.close();
 
         } catch (Exception e) {
             e.printStackTrace();
