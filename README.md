@@ -1,4 +1,4 @@
-## Multi-User Chat Application
+# Multi-User Chat Application
 A real-time client-server chat application built using Java, JavaFX, Socket Programming, Multithreading, and MySQL.
 The system allows multiple users to communicate simultaneously through public and private messaging while supporting secure authentication and file sharing.
 
@@ -35,9 +35,9 @@ messages
 files
 
 ## This project demonstrates concepts of:
-Network Programming
-Concurrent Programming
-Database Connectivity
-GUI Development
-File Handling
-Software Architecture Design
+Network Programming,
+Concurrent Programming,
+Database Connectivity,
+GUI Development,
+File Handling,
+Software Architecture Design,
