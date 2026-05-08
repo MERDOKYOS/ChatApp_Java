@@ -32,7 +32,7 @@ MySQL stores users, messages, and transferred files.
 Database Tables
 users
 messages
-files
+files.
 
 ## This project demonstrates concepts of:
 Network Programming,
@@ -40,4 +40,4 @@ Concurrent Programming,
 Database Connectivity,
 GUI Development,
 File Handling,
-Software Architecture Design,
+Software Architecture Design
