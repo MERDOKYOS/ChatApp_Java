@@ -2,32 +2,35 @@ package server;
 
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class ServerMain {
 
-    public static List<ClientHandler> clients =
-            new ArrayList<>();
+    // userId -> ClientHandler
+    public static Map<Integer, ClientHandler> activeClients =
+            new HashMap<>();
 
-    public static List<String> activeUsers =
-            new ArrayList<>();
+    // username -> userId
+    public static Map<String, Integer> userMap =
+            new HashMap<>();
 
     public static void main(String[] args) {
 
-        try (ServerSocket serverSocket = new ServerSocket(5000)) {
+        try (ServerSocket serverSocket =
+                     new ServerSocket(5000)) {
 
-            System.out.println("🚀 Server started on port 5000...");
+            System.out.println("🚀 Server Started...");
 
             while (true) {
 
                 Socket socket = serverSocket.accept();
 
-                System.out.println("✅ New client connected");
+                System.out.println("✅ Client Connected");
 
-                ClientHandler handler = new ClientHandler(socket);
-
-                clients.add(handler);
+                ClientHandler handler =
+                        new ClientHandler(socket);
 
                 handler.start();
             }
@@ -37,60 +40,118 @@ public class ServerMain {
         }
     }
 
-    // ================= BROADCAST MESSAGE =================
-    public static void broadcast(String message) {
+    // ================= PUBLIC MESSAGE =================
+    public static synchronized void broadcast(
+            String message,
+            ClientHandler sender
+    ) {
 
-        for (ClientHandler client : clients) {
-            try {
+        for (ClientHandler client :
+                activeClients.values()) {
+
+            if (client != sender) {
+
                 client.sendMessage(message);
-            } catch (Exception e) {
-                e.printStackTrace();
             }
         }
     }
 
-    // ================= BROADCAST USERS =================
+    // ================= PRIVATE MESSAGE =================
+    public static synchronized void sendPrivateMessage(
+            int receiverId,
+            String message
+    ) {
+
+        ClientHandler client =
+                activeClients.get(receiverId);
+
+        if (client != null) {
+
+            client.sendMessage(message);
+        }
+    }
+
+    // ================= USERS =================
     public static synchronized void broadcastUsers() {
 
-        String users = String.join(",", activeUsers);
+        StringBuilder sb = new StringBuilder();
 
-        for (ClientHandler client : clients) {
-            try {
-                client.sendUsers(users);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+        for (Map.Entry<String, Integer> entry :
+                userMap.entrySet()) {
+
+            sb.append(entry.getValue())
+                    .append(":")
+                    .append(entry.getKey())
+                    .append(",");
+        }
+
+        String users = sb.toString();
+
+        for (ClientHandler client :
+                activeClients.values()) {
+
+            client.sendUsers(users);
         }
     }
 
-    // ================= REMOVE CLIENT =================
-    public static synchronized void removeClient(ClientHandler client, String username) {
+    // ================= REMOVE =================
+    public static synchronized void removeClient(
+            ClientHandler client,
+            int userId,
+            String username
+    ) {
 
-        clients.remove(client);
-        activeUsers.remove(username);
+        activeClients.remove(userId);
+        userMap.remove(username);
 
-        broadcast("🔴 " + username + " left chat");
+        broadcast(
+                "🔴 " + username + " left chat",
+                client
+        );
 
         broadcastUsers();
     }
 
-    // ================= FILE BROADCAST =================
-    public static void broadcastFile(
+    // ================= PUBLIC FILE =================
+    public static synchronized void broadcastFile(
             String filePath,
             String fileName,
             long fileSize,
             ClientHandler sender
     ) {
 
-        for (ClientHandler client : clients) {
+        for (ClientHandler client :
+                activeClients.values()) {
 
             if (client != sender) {
-                try {
-                    client.sendFile(filePath, fileName, fileSize);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+
+                client.sendFile(
+                        filePath,
+                        fileName,
+                        fileSize
+                );
             }
+        }
+    }
+
+    // ================= PRIVATE FILE =================
+    public static synchronized void sendPrivateFile(
+            int receiverId,
+            String filePath,
+            String fileName,
+            long fileSize
+    ) {
+
+        ClientHandler client =
+                activeClients.get(receiverId);
+
+        if (client != null) {
+
+            client.sendFile(
+                    filePath,
+                    fileName,
+                    fileSize
+            );
         }
     }
 }

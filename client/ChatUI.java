@@ -5,154 +5,293 @@ import java.awt.Desktop;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+
 import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
+
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public class ChatUI extends Application {
 
-    public static TextArea chatArea = new TextArea();
-    public static TextField inputField = new TextField();
-    public static ListView<String> usersList = new ListView<>();
+    public static int userId;
 
-    // ================= USERNAME =================
     public static String username;
 
+    public static TextArea chatArea =
+            new TextArea();
+
+    public static TextField inputField =
+            new TextField();
+
+    public static ListView<UserItem> usersList =
+            new ListView<>();
+
+    private static String lastFilePath = null;
+
     public static void setUsername(String name) {
+
         username = name;
     }
-
-    // store last received file path
-    private static String lastFilePath = null;
 
     @Override
     public void start(Stage stage) {
 
-        // ================= CHAT AREA =================
         chatArea.setEditable(false);
+
         chatArea.setWrapText(true);
 
-        // ================= INPUT =================
-        inputField.setPromptText("Type a message...");
+        inputField.setPromptText(
+                "Type message..."
+        );
 
-        // ================= BUTTONS =================
-        Button sendButton = new Button("Send");
-        Button fileButton = new Button("Send File");
+        Button sendBtn =
+                new Button("Send");
 
-        // ================= CHAT BOX =================
-        VBox chatBox = new VBox(10,
+        Button fileBtn =
+                new Button("Send File");
+
+        VBox chatBox = new VBox(
+                10,
                 chatArea,
                 inputField,
-                sendButton,
-                fileButton
+                sendBtn,
+                fileBtn
         );
 
         chatBox.setPrefWidth(450);
 
-        // ================= USERS BOX =================
-        VBox usersBox = new VBox(10,
+        VBox usersBox = new VBox(
+                10,
                 new Label("Active Users"),
                 usersList
         );
 
-        usersBox.setPrefWidth(150);
+        usersBox.setPrefWidth(180);
 
-        // ================= MAIN LAYOUT =================
-        HBox layout = new HBox(10, usersBox, chatBox);
+        HBox root = new HBox(
+                10,
+                usersBox,
+                chatBox
+        );
 
-        // ================= ACTIONS =================
-        sendButton.setOnAction(e -> sendMessage());
-        inputField.setOnAction(e -> sendMessage());
-        fileButton.setOnAction(e -> sendFile());
+        sendBtn.setOnAction(e -> sendMessage());
 
-        // ================= SCENE =================
-        Scene scene = new Scene(layout, 650, 450);
+        inputField.setOnAction(
+                e -> sendMessage()
+        );
 
-        stage.setTitle("Multi User Chat App");
+        fileBtn.setOnAction(
+                e -> sendFile()
+        );
+
+        Scene scene =
+                new Scene(root, 700, 500);
+
         stage.setScene(scene);
+
+        stage.setTitle(
+                "Multi User Chat App"
+        );
+
         stage.show();
 
-        // ================= CONNECT ONLY ONCE =================
-        if (username == null) {
-            username = "User" + (int)(Math.random() * 1000);
-        }
-
-        new Thread(() -> ClientConnection.connect(username)).start();
-
-        // ================= DOUBLE CLICK FILE OPEN =================
+        // FILE OPEN
         chatArea.setOnMouseClicked(e -> {
 
-            if (e.getClickCount() == 2 && lastFilePath != null) {
+            if (e.getClickCount() == 2 &&
+                    lastFilePath != null) {
 
                 try {
-                    File file = new File(lastFilePath);
+
+                    File file =
+                            new File(lastFilePath);
 
                     if (file.exists()) {
-                        Desktop.getDesktop().open(file);
-                    } else {
-                        displayMessage("❌ File not found");
+
+                        Desktop.getDesktop()
+                                .open(file);
                     }
 
                 } catch (Exception ex) {
+
                     ex.printStackTrace();
                 }
             }
         });
     }
 
-    // ================= SEND MESSAGE =================
+    // ================= MESSAGE =================
     private void sendMessage() {
 
-        String msg = inputField.getText();
+        String msg =
+                inputField.getText();
 
-        if (msg != null && !msg.trim().isEmpty()) {
+        if (msg == null ||
+                msg.trim().isEmpty()) {
+
+            return;
+        }
+
+        UserItem selectedUser =
+                usersList.getSelectionModel()
+                        .getSelectedItem();
+
+        // PRIVATE
+        if (selectedUser != null) {
+
+            ClientConnection.sendPrivateMessage(
+                    selectedUser.getId(),
+                    msg
+            );
+
+            displayMessage(
+                    "(Private to "
+                            + selectedUser.getName()
+                            + "): "
+                            + msg
+            );
+        }
+
+        // PUBLIC
+        else {
 
             ClientConnection.sendMessage(msg);
-            inputField.clear();
+
+            displayMessage(
+                    "Me: " + msg
+            );
         }
+
+        inputField.clear();
     }
 
-    // ================= SEND FILE =================
+    // ================= FILE =================
     private void sendFile() {
 
-        FileChooser fileChooser = new FileChooser();
-        File file = fileChooser.showOpenDialog(null);
+        FileChooser chooser =
+                new FileChooser();
 
-        if (file != null) {
+        File file =
+                chooser.showOpenDialog(null);
 
-            new Thread(() -> ClientConnection.sendFile(file)).start();
+        if (file == null) return;
+
+        UserItem selectedUser =
+                usersList.getSelectionModel()
+                        .getSelectedItem();
+
+        // PRIVATE FILE
+        if (selectedUser != null) {
+
+            new Thread(() -> {
+
+                ClientConnection.sendPrivateFile(
+                        selectedUser.getId(),
+                        file
+                );
+
+            }).start();
+
+            displayMessage(
+                    "📁 Private file sent to "
+                            + selectedUser.getName()
+            );
+        }
+
+        // PUBLIC FILE
+        else {
+
+            new Thread(() -> {
+
+                ClientConnection.sendFile(file);
+
+            }).start();
+
+            displayMessage(
+                    "📁 Public file sent"
+            );
         }
     }
 
-    // ================= MESSAGE =================
-    public static void displayMessage(String message) {
+    // ================= DISPLAY =================
+    public static void displayMessage(
+            String message
+    ) {
 
-        Platform.runLater(() ->
-                chatArea.appendText(message + "\n")
-        );
+        Platform.runLater(() -> {
+
+            chatArea.appendText(
+                    message + "\n"
+            );
+        });
     }
 
     // ================= USERS =================
-    public static void updateUsers(String[] users) {
+    public static void updateUsers(
+            String[] users
+    ) {
 
         Platform.runLater(() -> {
-            usersList.getItems().setAll(users);
+
+            usersList.getItems().clear();
+
+            for (String user : users) {
+
+                if (user.trim().isEmpty())
+                    continue;
+
+                String[] parts =
+                        user.split(":");
+
+                int id =
+                        Integer.parseInt(parts[0]);
+
+                String name =
+                        parts[1];
+
+                if (!name.equals(username)) {
+
+                    usersList.getItems().add(
+
+                            new UserItem(
+                                    id,
+                                    name
+                            )
+                    );
+                }
+            }
         });
     }
 
     // ================= FILE MESSAGE =================
-    public static void showFileMessage(String fileName, String path) {
+    public static void showFileMessage(
+            String fileName,
+            String path
+    ) {
 
         Platform.runLater(() -> {
 
             lastFilePath = path;
-            chatArea.appendText("📁 " + fileName + " (double click to open)\n");
+
+            chatArea.appendText(
+                    "📁 "
+                            + fileName
+                            + " (double click to open)\n"
+            );
         });
     }
 
     public static void main(String[] args) {
+
         launch();
     }
 }
