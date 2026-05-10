@@ -23,12 +23,10 @@ public class ClientHandler extends Thread {
         try {
 
             dis = new DataInputStream(
-                    socket.getInputStream()
-            );
+                    socket.getInputStream());
 
             dos = new DataOutputStream(
-                    socket.getOutputStream()
-            );
+                    socket.getOutputStream());
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -44,7 +42,6 @@ public class ClientHandler extends Thread {
 
                 String type = dis.readUTF();
 
-                // ================= USER =================
                 if (type.equals("USERNAME")) {
 
                     userId = dis.readInt();
@@ -52,23 +49,20 @@ public class ClientHandler extends Thread {
 
                     ServerMain.activeClients.put(
                             userId,
-                            this
-                    );
+                            this);
 
                     ServerMain.userMap.put(
                             username,
-                            userId
-                    );
+                            userId);
 
                     ServerMain.broadcast(
-                            "🟢 " + username + " joined chat",
-                            this
-                    );
+                            "🟢 " + username + " JOINED CHAT",
+                            this);
 
                     ServerMain.broadcastUsers();
                 }
 
-                // ================= PUBLIC MESSAGE =================
+                // PUBLIC MESSAGE
                 else if (type.equals("MESSAGE")) {
 
                     String message = dis.readUTF();
@@ -76,16 +70,14 @@ public class ClientHandler extends Thread {
                     saveMessage(
                             userId,
                             null,
-                            message
-                    );
+                            message);
 
                     ServerMain.broadcast(
                             username + ": " + message,
-                            this
-                    );
+                            this);
                 }
 
-                // ================= PRIVATE MESSAGE =================
+                // PRIVATE MESSAGE
                 else if (type.equals("PRIVATE")) {
 
                     int receiverId = dis.readInt();
@@ -95,19 +87,17 @@ public class ClientHandler extends Thread {
                     saveMessage(
                             userId,
                             receiverId,
-                            message
-                    );
+                            message);
 
                     ServerMain.sendPrivateMessage(
                             receiverId,
-                            "(Private) " +
+                            "[PRIVATE] " +
                                     username +
                                     ": " +
-                                    message
-                    );
+                                    message);
                 }
 
-                // ================= PUBLIC FILE =================
+                // PUBLIC FILE
                 else if (type.equals("FILE")) {
 
                     String fileName = dis.readUTF();
@@ -117,11 +107,10 @@ public class ClientHandler extends Thread {
                     receiveFile(
                             fileName,
                             fileSize,
-                            null
-                    );
+                            null);
                 }
 
-                // ================= PRIVATE FILE =================
+                // PRIVATE FILE
                 else if (type.equals("PRIVATE_FILE")) {
 
                     int receiverId = dis.readInt();
@@ -133,8 +122,7 @@ public class ClientHandler extends Thread {
                     receiveFile(
                             fileName,
                             fileSize,
-                            receiverId
-                    );
+                            receiverId);
                 }
             }
 
@@ -144,25 +132,21 @@ public class ClientHandler extends Thread {
         }
     }
 
-    // ================= SAVE MESSAGE =================
+    // SAVE MESSAGE
     private void saveMessage(
             int senderId,
             Integer receiverId,
-            String message
-    ) {
+            String message) {
 
         try {
 
-            Connection con =
-                    Database.getConnection();
+            Connection con = Database.getConnection();
 
-            String sql =
-                    "INSERT INTO messages " +
+            String sql = "INSERT INTO messages " +
                     "(sender_id, receiver_id, message) " +
                     "VALUES (?,?,?)";
 
-            PreparedStatement ps =
-                    con.prepareStatement(sql);
+            PreparedStatement ps = con.prepareStatement(sql);
 
             ps.setInt(1, senderId);
 
@@ -170,8 +154,7 @@ public class ClientHandler extends Thread {
 
                 ps.setNull(
                         2,
-                        java.sql.Types.INTEGER
-                );
+                        java.sql.Types.INTEGER);
 
             } else {
 
@@ -188,26 +171,22 @@ public class ClientHandler extends Thread {
         }
     }
 
-    // ================= SAVE FILE =================
+    // SAVE FILE
     private void saveFile(
             int senderId,
             Integer receiverId,
             String fileName,
-            long fileSize
-    ) {
+            long fileSize) {
 
         try {
 
-            Connection con =
-                    Database.getConnection();
+            Connection con = Database.getConnection();
 
-            String sql =
-                    "INSERT INTO files " +
+            String sql = "INSERT INTO files " +
                     "(sender_id, receiver_id, file_name, file_size) " +
                     "VALUES (?,?,?,?)";
 
-            PreparedStatement ps =
-                    con.prepareStatement(sql);
+            PreparedStatement ps = con.prepareStatement(sql);
 
             ps.setInt(1, senderId);
 
@@ -215,8 +194,7 @@ public class ClientHandler extends Thread {
 
                 ps.setNull(
                         2,
-                        java.sql.Types.INTEGER
-                );
+                        java.sql.Types.INTEGER);
 
             } else {
 
@@ -235,23 +213,20 @@ public class ClientHandler extends Thread {
         }
     }
 
-    // ================= RECEIVE FILE =================
+    // RECEIVE FILE
     private void receiveFile(
             String fileName,
             long fileSize,
-            Integer receiverId
-    ) {
+            Integer receiverId) {
 
         try {
 
-            String savePath =
-                    "received_" +
-                            System.currentTimeMillis() +
-                            "_" +
-                            fileName;
+            String savePath = "received_" +
+                    System.currentTimeMillis() +
+                    "_" +
+                    fileName;
 
-            FileOutputStream fos =
-                    new FileOutputStream(savePath);
+            FileOutputStream fos = new FileOutputStream(savePath);
 
             byte[] buffer = new byte[4096];
 
@@ -263,11 +238,9 @@ public class ClientHandler extends Thread {
                     (read = dis.read(
                             buffer,
                             0,
-                            (int)Math.min(
+                            (int) Math.min(
                                     buffer.length,
-                                    remaining
-                            )
-                    )) > 0) {
+                                    remaining))) > 0) {
 
                 fos.write(buffer, 0, read);
 
@@ -280,8 +253,7 @@ public class ClientHandler extends Thread {
                     userId,
                     receiverId,
                     fileName,
-                    fileSize
-            );
+                    fileSize);
 
             // PUBLIC FILE
             if (receiverId == null) {
@@ -290,15 +262,13 @@ public class ClientHandler extends Thread {
                         "📁 " + username +
                                 " sent file: " +
                                 fileName,
-                        this
-                );
+                        this);
 
                 ServerMain.broadcastFile(
                         savePath,
                         fileName,
                         fileSize,
-                        this
-                );
+                        this);
             }
 
             // PRIVATE FILE
@@ -309,15 +279,13 @@ public class ClientHandler extends Thread {
                         "📁 Private file from " +
                                 username +
                                 ": " +
-                                fileName
-                );
+                                fileName);
 
                 ServerMain.sendPrivateFile(
                         receiverId,
                         savePath,
                         fileName,
-                        fileSize
-                );
+                        fileSize);
             }
 
         } catch (Exception e) {
@@ -326,7 +294,7 @@ public class ClientHandler extends Thread {
         }
     }
 
-    // ================= SEND MESSAGE =================
+    // SEND MESSAGE
     public void sendMessage(String message) {
 
         try {
@@ -343,7 +311,7 @@ public class ClientHandler extends Thread {
         }
     }
 
-    // ================= SEND USERS =================
+    // SEND USERS
     public void sendUsers(String users) {
 
         try {
@@ -360,12 +328,11 @@ public class ClientHandler extends Thread {
         }
     }
 
-    // ================= SEND FILE =================
+    // SEND FILE
     public void sendFile(
             String filePath,
             String fileName,
-            long fileSize
-    ) {
+            long fileSize) {
 
         try {
 
@@ -375,8 +342,7 @@ public class ClientHandler extends Thread {
 
             dos.writeLong(fileSize);
 
-            FileInputStream fis =
-                    new FileInputStream(filePath);
+            FileInputStream fis = new FileInputStream(filePath);
 
             byte[] buffer = new byte[4096];
 
@@ -397,7 +363,7 @@ public class ClientHandler extends Thread {
         }
     }
 
-    // ================= CLEANUP =================
+    // CLEANUP
     private void closeEverything() {
 
         try {
@@ -405,14 +371,16 @@ public class ClientHandler extends Thread {
             ServerMain.removeClient(
                     this,
                     userId,
-                    username
-            );
+                    username);
 
-            if (socket != null) socket.close();
+            if (socket != null)
+                socket.close();
 
-            if (dis != null) dis.close();
+            if (dis != null)
+                dis.close();
 
-            if (dos != null) dos.close();
+            if (dos != null)
+                dos.close();
 
         } catch (Exception e) {
 

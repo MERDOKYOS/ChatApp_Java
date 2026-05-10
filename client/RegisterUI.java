@@ -22,155 +22,131 @@ import java.sql.Statement;
 
 public class RegisterUI extends Application {
 
-    public static Stage stage;
+        public static Stage stage;
 
-    @Override
-    public void start(Stage primaryStage) {
+        @Override
+        public void start(Stage primaryStage) {
 
-        stage = primaryStage;
+                stage = primaryStage;
 
-        TextField nameField =
-                new TextField();
+                TextField nameField = new TextField();
 
-        nameField.setPromptText(
-                "Full Name"
-        );
+                nameField.setPromptText(
+                                "Full Name");
 
-        TextField emailField =
-                new TextField();
+                TextField emailField = new TextField();
 
-        emailField.setPromptText(
-                "Email"
-        );
+                emailField.setPromptText(
+                                "Email");
 
-        PasswordField passField =
-                new PasswordField();
+                PasswordField passField = new PasswordField();
 
-        passField.setPromptText(
-                "Password"
-        );
+                passField.setPromptText(
+                                "Password");
 
-        Button registerBtn =
-                new Button("Register");
+                Button registerBtn = new Button("Register");
 
-        Button loginBtn =
-                new Button("Go To Login");
+                Button loginBtn = new Button("Go To Login");
 
-        VBox box = new VBox(
-                10,
-                nameField,
-                emailField,
-                passField,
-                registerBtn,
-                loginBtn
-        );
+                VBox box = new VBox(
+                                10,
+                                nameField,
+                                emailField,
+                                passField,
+                                registerBtn,
+                                loginBtn);
 
-        registerBtn.setOnAction(e -> {
+                registerBtn.setOnAction(e -> {
 
-            String name =
-                    nameField.getText();
+                        String name = nameField.getText();
 
-            String email =
-                    emailField.getText();
+                        String email = emailField.getText();
 
-            String pass =
-                    passField.getText();
+                        String pass = passField.getText();
 
-            if (name.isEmpty()
-                    || email.isEmpty()
-                    || pass.isEmpty()) {
+                        if (name.isEmpty()
+                                        || email.isEmpty()
+                                        || pass.isEmpty()) {
 
-                showAlert(
-                        "All fields required!"
-                );
+                                showAlert(
+                                                "All fields required!");
 
-                return;
-            }
+                                return;
+                        }
 
-            try {
+                        try {
 
-                Connection con =
-                        DBConnection.getConnection();
+                                Connection con = DBConnection.getConnection();
 
-                String sql =
-                        "INSERT INTO users " +
-                        "(full_name,email,password,created_at) " +
-                        "VALUES (?,?,?,NOW())";
+                                String sql = "INSERT INTO users " +
+                                                "(full_name,email,password,created_at) " +
+                                                "VALUES (?,?,?,NOW())";
 
-                PreparedStatement ps =
-                        con.prepareStatement(
-                                sql,
-                                Statement.RETURN_GENERATED_KEYS
-                        );
+                                PreparedStatement ps = con.prepareStatement(
+                                                sql,
+                                                Statement.RETURN_GENERATED_KEYS);
 
-                ps.setString(1, name);
+                                ps.setString(1, name);
 
-                ps.setString(2, email);
+                                ps.setString(2, email);
 
-                ps.setString(3, pass);
+                                ps.setString(3, pass);
 
-                int rows =
-                        ps.executeUpdate();
+                                int rows = ps.executeUpdate();
 
-                if (rows > 0) {
+                                if (rows > 0) {
 
-                    ResultSet rs =
-                            ps.getGeneratedKeys();
+                                        ResultSet rs = ps.getGeneratedKeys();
 
-                    if (rs.next()) {
+                                        if (rs.next()) {
 
-                        ChatUI.userId =
-                                rs.getInt(1);
-                    }
+                                                ChatUI.userId = rs.getInt(1);
+                                        }
 
-                    ChatUI.setUsername(name);
+                                        ChatUI.setUsername(name);
 
-                    stage.close();
+                                        stage.close();
 
-                    ChatUI chat =
-                            new ChatUI();
+                                        ChatUI chat = new ChatUI();
 
-                    chat.start(new Stage());
+                                        chat.start(new Stage());
 
-                    new Thread(() -> {
+                                        new Thread(() -> {
 
-                        ClientConnection.connect(name);
+                                                ClientConnection.connect(name);
 
-                    }).start();
-                }
+                                        }).start();
+                                }
 
-            } catch (Exception ex) {
+                        } catch (Exception ex) {
 
-                ex.printStackTrace();
-            }
-        });
+                                ex.printStackTrace();
+                        }
+                });
 
-        loginBtn.setOnAction(e -> {
+                loginBtn.setOnAction(e -> {
 
-            stage.close();
+                        stage.close();
 
-            new LoginUI().start(
-                    new Stage()
-            );
-        });
+                        new LoginUI().start(
+                                        new Stage());
+                });
 
-        Scene scene =
-                new Scene(box, 320, 260);
+                Scene scene = new Scene(box, 320, 260);
 
-        stage.setScene(scene);
+                stage.setScene(scene);
 
-        stage.setTitle("Register");
+                stage.setTitle("Register");
 
-        stage.show();
-    }
+                stage.show();
+        }
 
-    private void showAlert(String msg) {
+        private void showAlert(String msg) {
 
-        Alert alert =
-                new Alert(Alert.AlertType.ERROR);
+                Alert alert = new Alert(Alert.AlertType.ERROR);
 
-        alert.setContentText(msg);
+                alert.setContentText(msg);
 
-        alert.showAndWait();
-    }
+                alert.showAndWait();
+        }
 }

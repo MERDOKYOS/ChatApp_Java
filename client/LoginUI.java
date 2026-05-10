@@ -21,139 +21,120 @@ import java.sql.ResultSet;
 
 public class LoginUI extends Application {
 
-    public static Stage stage;
+        public static Stage stage;
 
-    @Override
-    public void start(Stage primaryStage) {
+        @Override
+        public void start(Stage primaryStage) {
 
-        stage = primaryStage;
+                stage = primaryStage;
 
-        TextField emailField =
-                new TextField();
+                TextField emailField = new TextField();
 
-        emailField.setPromptText("Email");
+                emailField.setPromptText("Email");
 
-        PasswordField passField =
-                new PasswordField();
+                PasswordField passField = new PasswordField();
 
-        passField.setPromptText("Password");
+                passField.setPromptText("Password");
 
-        Button loginBtn =
-                new Button("Login");
+                Button loginBtn = new Button("Login");
 
-        Button registerBtn =
-                new Button("Register");
+                Button registerBtn = new Button("Register");
 
-        VBox box = new VBox(
-                10,
-                emailField,
-                passField,
-                loginBtn,
-                registerBtn
-        );
+                VBox box = new VBox(
+                                10,
+                                emailField,
+                                passField,
+                                loginBtn,
+                                registerBtn);
 
-        loginBtn.setOnAction(e -> {
+                loginBtn.setOnAction(e -> {
 
-            String email =
-                    emailField.getText();
+                        String email = emailField.getText();
 
-            String pass =
-                    passField.getText();
+                        String pass = passField.getText();
 
-            if (email.isEmpty()
-                    || pass.isEmpty()) {
+                        if (email.isEmpty()
+                                        || pass.isEmpty()) {
 
-                showAlert(
-                        "All fields required!"
-                );
+                                showAlert(
+                                                "All fields required!");
 
-                return;
-            }
+                                return;
+                        }
 
-            try {
+                        try {
 
-                Connection con =
-                        DBConnection.getConnection();
+                                Connection con = DBConnection.getConnection();
 
-                String sql =
-                        "SELECT user_id, full_name " +
-                        "FROM users " +
-                        "WHERE email=? AND password=?";
+                                String sql = "SELECT user_id, full_name " +
+                                                "FROM users " +
+                                                "WHERE email=? AND password=?";
 
-                PreparedStatement ps =
-                        con.prepareStatement(sql);
+                                PreparedStatement ps = con.prepareStatement(sql);
 
-                ps.setString(1, email);
+                                ps.setString(1, email);
 
-                ps.setString(2, pass);
+                                ps.setString(2, pass);
 
-                ResultSet rs =
-                        ps.executeQuery();
+                                ResultSet rs = ps.executeQuery();
 
-                if (rs.next()) {
+                                if (rs.next()) {
 
-                    int id =
-                            rs.getInt("user_id");
+                                        int id = rs.getInt("user_id");
 
-                    String name =
-                            rs.getString("full_name");
+                                        String name = rs.getString("full_name");
 
-                    ChatUI.userId = id;
+                                        ChatUI.userId = id;
 
-                    ChatUI.setUsername(name);
+                                        ChatUI.setUsername(name);
 
-                    stage.close();
+                                        stage.close();
 
-                    ChatUI chat =
-                            new ChatUI();
+                                        ChatUI chat = new ChatUI();
 
-                    chat.start(new Stage());
+                                        chat.start(new Stage());
 
-                    new Thread(() -> {
+                                        new Thread(() -> {
 
-                        ClientConnection.connect(name);
+                                                ClientConnection.connect(name);
 
-                    }).start();
+                                        }).start();
 
-                } else {
+                                } else {
 
-                    showAlert(
-                            "Invalid login!"
-                    );
-                }
+                                        showAlert(
+                                                        "Invalid login!");
+                                }
 
-            } catch (Exception ex) {
+                        } catch (Exception ex) {
 
-                ex.printStackTrace();
-            }
-        });
+                                ex.printStackTrace();
+                        }
+                });
 
-        registerBtn.setOnAction(e -> {
+                registerBtn.setOnAction(e -> {
 
-            stage.close();
+                        stage.close();
 
-            new RegisterUI().start(
-                    new Stage()
-            );
-        });
+                        new RegisterUI().start(
+                                        new Stage());
+                });
 
-        Scene scene =
-                new Scene(box, 300, 220);
+                Scene scene = new Scene(box, 300, 220);
 
-        stage.setScene(scene);
+                stage.setScene(scene);
 
-        stage.setTitle("Login");
+                stage.setTitle("Login");
 
-        stage.show();
-    }
+                stage.show();
+        }
 
-    private void showAlert(String msg) {
+        private void showAlert(String msg) {
 
-        Alert alert =
-                new Alert(Alert.AlertType.ERROR);
+                Alert alert = new Alert(Alert.AlertType.ERROR);
 
-        alert.setContentText(msg);
+                alert.setContentText(msg);
 
-        alert.showAndWait();
-    }
+                alert.showAndWait();
+        }
 }

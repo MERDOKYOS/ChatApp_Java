@@ -13,53 +13,38 @@ public class ClientConnection {
 
     private static boolean connected = false;
 
-    // ================= CONNECT =================
-    public static void connect(
-            String username
-    ) {
+    // CREATE CONNECTION
+    public static void connect(String username) {
 
-        if (connected) return;
+        if (connected)
+            return;
 
         connected = true;
 
         try {
 
-            socket =
-                    new Socket(
-                            "localhost",
-                            5000
-                    );
+            socket = new Socket("localhost", 5000);
 
-            dis =
-                    new DataInputStream(
-                            socket.getInputStream()
-                    );
-
-            dos =
-                    new DataOutputStream(
-                            socket.getOutputStream()
-                    );
+            dis = new DataInputStream(socket.getInputStream());
+            dos = new DataOutputStream(socket.getOutputStream());
 
             dos.writeUTF("USERNAME");
-
             dos.writeInt(ChatUI.userId);
-
             dos.writeUTF(username);
-
             dos.flush();
+
+            ChatUI.displayMessage("✅ YOU LOGGED IN AS " + username);
 
             receiveMessages();
 
         } catch (Exception e) {
-
             e.printStackTrace();
         }
     }
 
-    // ================= PUBLIC MESSAGE =================
+    // PUBLIC MESSAGE
     public static void sendMessage(
-            String message
-    ) {
+            String message) {
 
         try {
 
@@ -75,11 +60,10 @@ public class ClientConnection {
         }
     }
 
-    // ================= PRIVATE MESSAGE =================
+    // PRIVATE MESSAGE
     public static void sendPrivateMessage(
             int receiverId,
-            String message
-    ) {
+            String message) {
 
         try {
 
@@ -97,15 +81,13 @@ public class ClientConnection {
         }
     }
 
-    // ================= PUBLIC FILE =================
+    // PUBLIC FILE
     public static void sendFile(
-            File file
-    ) {
+            File file) {
 
         try {
 
-            FileInputStream fis =
-                    new FileInputStream(file);
+            FileInputStream fis = new FileInputStream(file);
 
             dos.writeUTF("FILE");
 
@@ -113,13 +95,11 @@ public class ClientConnection {
 
             dos.writeLong(file.length());
 
-            byte[] buffer =
-                    new byte[4096];
+            byte[] buffer = new byte[4096];
 
             int read;
 
-            while ((read =
-                    fis.read(buffer)) != -1) {
+            while ((read = fis.read(buffer)) != -1) {
 
                 dos.write(buffer, 0, read);
             }
@@ -134,16 +114,14 @@ public class ClientConnection {
         }
     }
 
-    // ================= PRIVATE FILE =================
+    // PRIVATE FILE
     public static void sendPrivateFile(
             int receiverId,
-            File file
-    ) {
+            File file) {
 
         try {
 
-            FileInputStream fis =
-                    new FileInputStream(file);
+            FileInputStream fis = new FileInputStream(file);
 
             dos.writeUTF("PRIVATE_FILE");
 
@@ -153,13 +131,11 @@ public class ClientConnection {
 
             dos.writeLong(file.length());
 
-            byte[] buffer =
-                    new byte[4096];
+            byte[] buffer = new byte[4096];
 
             int read;
 
-            while ((read =
-                    fis.read(buffer)) != -1) {
+            while ((read = fis.read(buffer)) != -1) {
 
                 dos.write(buffer, 0, read);
             }
@@ -174,7 +150,7 @@ public class ClientConnection {
         }
     }
 
-    // ================= RECEIVE =================
+    // RECEIVE
     private static void receiveMessages() {
 
         new Thread(() -> {
@@ -183,53 +159,44 @@ public class ClientConnection {
 
                 while (socket.isConnected()) {
 
-                    String type =
-                            dis.readUTF();
+                    String type = dis.readUTF();
 
-                    // MESSAGE
+                    
                     if (type.equals("MESSAGE")) {
 
-                        String msg =
-                                dis.readUTF();
+                        String msg = dis.readUTF();
 
                         ChatUI.displayMessage(msg);
                     }
 
-                    // USERS
+                    
                     else if (type.equals("USERS")) {
 
-                        String users =
-                                dis.readUTF();
+                        String users = dis.readUTF();
 
                         ChatUI.updateUsers(
-                                users.split(",")
-                        );
+                                users.split(","));
                     }
 
-                    // FILE
+                    
                     else if (type.equals("FILE")) {
 
-                        String fileName =
-                                dis.readUTF();
+                        String fileName = dis.readUTF();
 
-                        long fileSize =
-                                dis.readLong();
+                        long fileSize = dis.readLong();
 
-                        String savePath =
-                                "client_received_"
-                                        + System.currentTimeMillis()
-                                        + "_"
-                                        + fileName;
+                        String savePath = "client_received_"
+                                + System.currentTimeMillis()
+                                + "_"
+                                + fileName;
 
                         receiveFile(
                                 savePath,
-                                fileSize
-                        );
+                                fileSize);
 
                         ChatUI.showFileMessage(
                                 fileName,
-                                savePath
-                        );
+                                savePath);
                     }
                 }
 
@@ -241,19 +208,16 @@ public class ClientConnection {
         }).start();
     }
 
-    // ================= RECEIVE FILE =================
+    // RECEIVE FILE
     private static void receiveFile(
             String savePath,
-            long fileSize
-    ) {
+            long fileSize) {
 
         try {
 
-            FileOutputStream fos =
-                    new FileOutputStream(savePath);
+            FileOutputStream fos = new FileOutputStream(savePath);
 
-            byte[] buffer =
-                    new byte[4096];
+            byte[] buffer = new byte[4096];
 
             int read;
 
@@ -263,11 +227,9 @@ public class ClientConnection {
                     (read = dis.read(
                             buffer,
                             0,
-                            (int)Math.min(
+                            (int) Math.min(
                                     buffer.length,
-                                    remaining
-                            )
-                    )) > 0) {
+                                    remaining))) > 0) {
 
                 fos.write(buffer, 0, read);
 
