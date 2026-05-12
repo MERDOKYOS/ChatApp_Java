@@ -132,7 +132,7 @@ public class RegisterUI extends Application {
                                         new Stage());
                 });
 
-                Scene scene = new Scene(box, 320, 260);
+                Scene scene = new Scene(box, 420, 360);
 
                 stage.setScene(scene);
 

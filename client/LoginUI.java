@@ -103,7 +103,7 @@ public class LoginUI extends Application {
                                 } else {
 
                                         showAlert(
-                                                        "Invalid login!");
+                                                        "Invalid login Please Register!");
                                 }
 
                         } catch (Exception ex) {
@@ -120,7 +120,7 @@ public class LoginUI extends Application {
                                         new Stage());
                 });
 
-                Scene scene = new Scene(box, 300, 220);
+                Scene scene = new Scene(box, 400, 320);
 
                 stage.setScene(scene);
 

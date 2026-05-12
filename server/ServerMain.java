@@ -18,13 +18,13 @@ public class ServerMain {
 
         try (ServerSocket serverSocket = new ServerSocket(5000)) {
 
-            System.out.println("🚀 Server Started...");
+            System.out.println("Server Started...");
 
             while (true) {
 
                 Socket socket = serverSocket.accept();
 
-                System.out.println("✅ Client Connected");
+                System.out.println("Client Connected");
 
                 ClientHandler handler = new ClientHandler(socket);
 

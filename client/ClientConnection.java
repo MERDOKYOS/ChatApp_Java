@@ -33,7 +33,7 @@ public class ClientConnection {
             dos.writeUTF(username);
             dos.flush();
 
-            ChatUI.displayMessage("✅ YOU LOGGED IN AS " + username);
+            ChatUI.displayMessage("YOU LOGGED IN AS " + username);
 
             receiveMessages();
 
